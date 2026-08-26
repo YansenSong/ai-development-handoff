@@ -10,7 +10,7 @@ Use this skill on the **planning side** of a software change.
 Its job is to combine two disciplines into one ChatGPT workflow:
 
 1. **Grill with docs** — inspect the real repository, interview the user until important design decisions are explicit, sharpen domain language, and capture durable domain/architecture knowledge.
-2. **To spec** — once the design is settled, stop interviewing and synthesize the existing conversation plus repository evidence into an implementation-ready spec.
+2. **To spec** — once the design is settled, synthesize the current conversation and codebase understanding into an implementation-ready spec, including an explicit testing-seam confirmation step.
 
 The workflow ends when the spec and any durable supporting documents are published to GitHub. **Do not implement the feature under this skill.** Local implementation belongs to a separately installed implementation skill such as `implement` in Codex.
 
@@ -29,10 +29,11 @@ grill with docs
 shared understanding / readiness gate
       ↓
 to spec
+      ├── confirm testing seams
       ├── problem + solution
-      ├── exhaustive user stories
+      ├── extremely extensive user stories
       ├── implementation decisions
-      ├── testing decisions / seams
+      ├── testing decisions
       └── out of scope
       ↓
 GitHub: .chatgpt/specs/*.md
@@ -46,9 +47,9 @@ Codex + separately installed implement skill
 
 ### ChatGPT / planner
 
-The planner owns repository investigation, fact finding, requirement clarification, design grilling, implementation boundaries, domain-model clarification, durable context/ADR documentation when justified, test-seam decisions, and synthesis/publication of the final spec.
+The planner owns repository investigation, fact finding, requirement clarification, design grilling, implementation boundaries, domain-model clarification, durable context/ADR documentation when justified, testing-seam proposal and confirmation, and synthesis/publication of the final spec.
 
-The planner does **not** own production-code implementation, running the implementation agent, or silently filling material design gaps during synthesis.
+The planner does **not** own production-code implementation, running the implementation agent, or silently filling material design gaps.
 
 If the user explicitly asks for a different workflow that includes direct code edits, that is outside this skill.
 
@@ -124,7 +125,7 @@ The **decisions** are the user's. Put each decision to the user and wait for the
 
 The grilling session is done when the frontier is empty: every branch of the design tree has been visited and nothing remains silently assumed.
 
-Do not move on to synthesis until the user confirms that you have reached a shared understanding.
+Do not move on until the user confirms that you have reached a shared understanding.
 
 ---
 
@@ -174,21 +175,9 @@ Use `references/CONTEXT_FORMAT.md` and `references/ADR_FORMAT.md` for artifact s
 
 When the user uses a term that conflicts with the existing language in `CONTEXT.md`, call it out immediately and ask which meaning is intended.
 
-Example pattern:
-
-```text
-Your glossary defines “cancellation” as X, but you seem to mean Y. Which is it?
-```
-
 ### Sharpen fuzzy language
 
 When the user uses vague or overloaded terms, propose a precise canonical term and distinguish it from nearby concepts.
-
-Example pattern:
-
-```text
-You're saying “account”: do you mean the Customer or the User? Those are different concepts.
-```
 
 ### Discuss concrete scenarios
 
@@ -222,7 +211,7 @@ ADRs are durable architectural memory; the spec is the task-specific implementat
 
 # Phase 4 — Ready-to-spec gate
 
-After the grilling frontier is empty and the user has confirmed shared understanding, perform a separate completeness check before switching to synthesis.
+After the grilling frontier is empty and the user has confirmed shared understanding, perform a separate completeness check before switching to To Spec.
 
 Relevant dimensions should be settled:
 
@@ -235,35 +224,46 @@ Relevant dimensions should be settled:
 - compatibility expectations are decided;
 - meaningful failure behavior is decided;
 - persistence/security/permissions are decided when relevant;
-- testing intent and candidate seams are understood;
 - no unresolved decision remains that could materially change the implementation approach.
 
 This gate is **not part of the grilling question-ordering protocol**. Do not use it to impose a fixed priority order or checklist-driven interview on Phase 2.
 
+Testing-seam confirmation is intentionally not required by this gate: the original To Spec method performs that narrow confirmation itself in Phase 5.
+
 If this check reveals a material decision that was missed, treat it as a newly discovered branch in the design tree, return to Phase 2, and resume the normal frontier process. After that branch is resolved and the user reconfirms shared understanding, run this gate again.
 
-Once this gate is satisfied, **stop broad interviewing** and move to synthesis.
+Once this gate is satisfied, move to To Spec.
 
 ---
 
 # Phase 5 — To spec
 
-This phase synthesizes what has already been learned. It is not another general interview.
+Take the current conversation context and codebase understanding and produce the spec. **Do not start another general interview.** Synthesize what has already been discussed, with the one narrow confirmation step for testing seams described below.
 
-Before writing the spec:
+## Step 1 — Explore the repository if needed
 
-1. refresh repository facts if the planning conversation was long or the repository may have changed;
-2. use the project's canonical domain vocabulary;
-3. respect relevant ADRs;
-4. identify the testing seams implied by the design and existing code.
+Explore the repository to understand the current state of the codebase if that work has not already been done, or refresh relevant facts if the repository may have changed during a long planning session.
 
-## Testing seams
+Use the project's domain glossary vocabulary throughout the spec and respect relevant ADRs in the area being changed.
 
-Prefer existing seams over introducing new ones. Use the highest practical seam that verifies external behavior rather than implementation details. Prefer fewer seams; one high-value seam is better than many low-level seams when it covers behavior well. Use similar existing tests as prior art.
+## Step 2 — Sketch and confirm testing seams
 
-The test seam should normally have been discussed during grilling. If synthesis reveals that a material seam was never agreed, do **not** silently invent it. Return only that unresolved decision to the user, settle it through the normal design-tree/frontier process, then resume synthesis.
+Sketch the seams at which the feature should be tested.
 
-## Spec rules
+- Prefer existing seams to new ones.
+- Use the **highest seam possible**.
+- If new seams are needed, propose them at the highest point possible.
+- The fewer seams across the codebase, the better. The **ideal number is one** when one seam can adequately verify the behavior.
+- Tests should verify external behavior rather than implementation details.
+- Use similar existing tests in the repository as prior art when available.
+
+**Check with the user that these seams match their expectations before writing the spec.**
+
+This testing-seam check is part of To Spec itself; do not force it into the earlier Grilling protocol.
+
+If the user's response merely confirms or selects among the proposed seams, continue directly to writing the spec. If the response exposes a broader unresolved product or design decision, return that newly discovered decision to the normal design-tree/frontier process, re-establish shared understanding, then resume To Spec.
+
+## Step 3 — Write the spec
 
 Use `references/SPEC_FORMAT.md`.
 
@@ -277,17 +277,70 @@ Create `.chatgpt/specs/` lazily when the first spec is published.
 
 The spec must be understandable by an implementation agent that has the repository but not the earlier conversation.
 
-It must describe the problem and solution from the user's perspective, contain an extensive numbered user-story list including meaningful edge cases, record implementation decisions already made, record testing decisions and seams, state out-of-scope work, record repository/branch/base commit, and contain enough detail to prevent the executor from needing to redesign the feature.
+### Problem Statement
 
-Do not paste the conversation transcript. Do not include brittle line-by-line implementation instructions. Do not include specific file paths merely to direct edits; stable module/component/interface names are fine when they are part of the design.
+Describe the problem from the user's perspective.
 
-Avoid code snippets. Exception: a compact prototype-derived shape may be included when it captures a decision more precisely than prose. Include only the decision-rich fragment and note why it is present.
+### Solution
 
-## Readiness status
+Describe the solution from the user's perspective.
 
-A published handoff spec should normally be `Ready for implementation` only after the user has explicitly approved the design, unless approval is already unambiguous in the conversation.
+### User Stories
 
-If it is still being shared for review, publish it as `Draft` and do not describe it as ready for Codex.
+Write a **LONG, numbered list** of user stories. The list should be **extremely extensive and cover all aspects of the feature**, including meaningful edge cases and boundary behavior.
+
+Use the form:
+
+```text
+1. As an <actor>, I want a <feature>, so that <benefit>.
+```
+
+### Implementation Decisions
+
+Record the implementation decisions that were actually made. These may include:
+
+- modules that will be built or modified;
+- interfaces of those modules that will change;
+- technical clarifications from the developer;
+- architectural decisions;
+- schema changes;
+- API contracts;
+- specific interactions.
+
+**Do NOT include specific file paths or code snippets.** They may become outdated quickly.
+
+Exception: if a prototype produced a snippet that encodes a decision more precisely than prose can—for example a state machine, reducer, schema, or type shape—inline only the decision-rich fragment and note briefly that it came from a prototype. Do not include a working demo.
+
+### Testing Decisions
+
+Record the testing decisions that were made, including:
+
+- what makes a good test for this feature: verify external behavior, not implementation details;
+- which modules will be tested;
+- the confirmed testing seam or seams;
+- prior art for the tests, such as similar existing tests in the codebase.
+
+### Out of Scope
+
+Describe the things that are explicitly outside this spec.
+
+### Further Notes
+
+Include any further execution-relevant notes about the feature.
+
+## Handoff metadata adaptation
+
+The original To Spec method publishes to an issue tracker. This workflow instead publishes a version-controlled spec document for Codex, so `references/SPEC_FORMAT.md` adds these handoff fields:
+
+- Status;
+- Repository;
+- Branch;
+- Base commit;
+- Created / Updated dates.
+
+These fields are a GitHub handoff adaptation, not part of the core To Spec synthesis method.
+
+A published spec should be `Ready for implementation` only after the user has approved the design or that approval is already unambiguous. Otherwise publish it as `Draft`.
 
 ---
 
@@ -344,6 +397,6 @@ The spec may reference relevant domain terms and ADRs, but should not duplicate 
 
 # Supporting references
 
-- `references/SPEC_FORMAT.md` — final implementation spec format.
+- `references/SPEC_FORMAT.md` — final implementation spec format and GitHub handoff metadata adaptation.
 - `references/CONTEXT_FORMAT.md` — domain glossary format.
 - `references/ADR_FORMAT.md` — ADR format and threshold.
