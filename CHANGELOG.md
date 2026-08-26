@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.2 — Restore original domain-modeling semantics
+
+- Restored Phase 3 as an active domain-modeling discipline rather than a lighter terminology check.
+- Restored immediate glossary behavior: when a domain term is resolved, update the current `CONTEXT.md` artifact state immediately rather than deferring capture until spec synthesis.
+- Clarified that immediate domain capture does not require a separate Git commit per resolved term; GitHub publication timing belongs to the handoff publication phase.
+- Restored lazy file creation: create `CONTEXT.md` when the first durable term is resolved and create an ADR directory only when the first ADR is justified.
+- Restored explicit single-context versus multi-context repository structure, including root `CONTEXT-MAP.md` and context-specific `CONTEXT.md`/ADR locations.
+- Restored the original behaviors to challenge glossary conflicts, sharpen fuzzy terminology, test relationships with concrete scenarios, and cross-reference claimed domain behavior with code.
+- Preserved the original three-part ADR threshold: hard to reverse, surprising without context, and the result of a real trade-off.
+- Kept GitHub-specific batching/publishing rules in Phase 6 rather than changing the domain-modeling method itself.
+
 ## 0.3.1 — Restore original grilling semantics
 
 - Restored Phase 2 to the original `grilling` design-tree/frontier protocol.
