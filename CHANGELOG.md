@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.3 — Restore original to-spec semantics
+
+- Restored Phase 5 to the original `to-spec` sequence: repository understanding, testing-seam proposal/confirmation, then spec synthesis.
+- Restored the narrow To Spec interaction that asks the user to confirm proposed testing seams rather than forcing seam confirmation into Grilling or Ready-to-Spec.
+- Restored the original seam guidance: prefer existing seams, use the highest seam possible, place new seams as high as possible, and prefer fewer seams with an ideal of one when sufficient.
+- Restored the stronger user-story requirement: a LONG, extremely extensive numbered list covering all aspects of the feature.
+- Restored the original rule to omit specific file paths and code snippets from Implementation Decisions, retaining only the prototype-derived decision-rich snippet exception.
+- Restored the original Testing Decisions content: external behavior, modules under test, confirmed seams, and prior-art tests.
+- Kept `.chatgpt/specs/*.md` publication plus Status, Repository, Branch, Base commit, and dates as explicit GitHub handoff adaptations rather than part of the core To Spec method.
+
 ## 0.3.2 — Restore original domain-modeling semantics
 
 - Restored Phase 3 as an active domain-modeling discipline rather than a lighter terminology check.
