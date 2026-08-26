@@ -1,355 +1,299 @@
 ---
 name: ai-development-handoff
-description: Turn repository-grounded discussion into an implementation-ready plan, persist the agreed plan in GitHub, and guide a local coding agent to execute it safely against the real checkout. Use when planning software changes, sharpening implementation details and boundaries, creating handoff plans, or executing an approved handoff plan locally.
+description: Turn repository-grounded discussion into a complete implementation spec for a local coding agent. Use when ChatGPT should clarify requirements, stress-test design and boundaries, maintain domain/ADR documentation, synthesize the agreed solution into a GitHub spec, and hand that spec to Codex for implementation. This skill stops before code implementation.
 ---
 
 # AI Development Handoff
 
-Use this skill as one complete workflow for software changes that begin in ChatGPT or another planning conversation and are later executed by a local coding agent such as Codex.
+Use this skill on the **planning side** of a software change.
 
-The workflow is intentionally split between planning and execution, but both halves are governed by this single skill.
+Its job is to combine two disciplines into one ChatGPT workflow:
 
-## Operating model
+1. **Grill with docs** — inspect the real repository, interview the user until important design decisions are explicit, sharpen domain language, and capture durable domain/architecture knowledge.
+2. **To spec** — once the design is settled, stop interviewing and synthesize the existing conversation plus repository evidence into an implementation-ready spec.
 
-The durable handoff artifact is an implementation plan stored in the target repository under:
+The workflow ends when the spec and any durable supporting documents are published to GitHub. **Do not implement the feature under this skill.** Local implementation belongs to a separately installed implementation skill such as `implement` in Codex.
+
+The normal flow is:
 
 ```text
-.chatgpt/plans/YYYY-MM-DD-short-description.md
+ChatGPT + GitHub
+      ↓
+repository understanding
+      ↓
+grill with docs
+      ├── design tree / frontier questions
+      ├── domain vocabulary
+      └── ADR candidates
+      ↓
+shared understanding / readiness gate
+      ↓
+to spec
+      ├── problem + solution
+      ├── exhaustive user stories
+      ├── implementation decisions
+      ├── testing decisions / seams
+      └── out of scope
+      ↓
+GitHub: .chatgpt/specs/*.md
+      ↓
+local git pull
+      ↓
+Codex + separately installed implement skill
 ```
 
-The target project does not need a copied workflow template, a copied skill directory, or a project-level `AGENTS.md` solely for this workflow. The plan is the project-specific handoff artifact. This skill carries the reusable method.
+## Role boundary
 
-Three kinds of truth must remain distinct:
+### ChatGPT / planner
 
-- **Conversation truth**: exploration, alternatives, temporary reasoning, and unresolved questions.
-- **Plan truth**: the durable agreed scope, design decisions, constraints, verification, and acceptance criteria.
-- **Execution truth**: the real state of the local repository when implementation begins.
+The planner owns repository investigation, fact finding, requirement clarification, design grilling, implementation boundaries, domain-model clarification, durable context/ADR documentation when justified, test-seam decisions, and synthesis/publication of the final spec.
 
-Conversation produces decisions. GitHub preserves the decisions. The local coding agent executes those decisions against the real repository.
+The planner does **not** own production-code implementation, running the implementation agent, or silently filling material design gaps during synthesis.
 
-## Roles
+If the user explicitly asks for a different workflow that includes direct code edits, that is outside this skill.
 
-### Planner
+### GitHub / handoff store
 
-The planner is usually ChatGPT working from the GitHub repository. It must inspect the real repository before turning assumptions into implementation decisions.
+GitHub stores the durable planning artifacts:
 
-The planner is responsible for:
+```text
+.chatgpt/specs/YYYY-MM-DD-short-description.md
+CONTEXT.md                                  # when durable domain vocabulary exists
+docs/adr/NNNN-short-decision.md             # when a real ADR is justified
+```
 
-- understanding the relevant current code;
-- identifying facts from the repository instead of asking the user to recall them;
-- separating user decisions from repository facts;
-- stress-testing the design and implementation boundaries;
-- sharpening domain language when terminology matters;
-- recording only durable execution-relevant decisions;
-- producing and publishing an implementation plan when the design is ready.
+For multi-context repositories, domain context may instead use a root `CONTEXT-MAP.md` plus context-specific `CONTEXT.md` files as described in `references/CONTEXT_FORMAT.md`.
 
-### GitHub repository
+### Codex / executor
 
-GitHub is the durable handoff medium. It stores:
+Codex consumes the published spec using its separately installed implementation workflow. The spec must therefore be sufficient for a fresh executor that did not participate in the ChatGPT conversation.
 
-- the source revision used during planning;
-- the approved implementation plan;
-- optional domain context or ADRs created during planning;
-- later implementation commits and review history.
-
-### Local coding agent
-
-The executor is usually Codex operating on a local checkout. It is responsible for validating the plan against execution-time reality, implementing only the agreed scope, running required checks, and reporting deviations.
-
-The executor must not reconstruct the earlier planning conversation. The plan must be sufficient for execution.
+Do not rely on Codex reconstructing missing decisions from chat history.
 
 ---
 
-# Phase 1 — Repository understanding
+# Phase 1 — Understand the repository first
 
-Before asking design questions, inspect the target repository and establish the current facts relevant to the request.
+Before interviewing the user about implementation details, inspect the target repository and establish the relevant facts.
 
-Typical facts include:
+Typical facts include current architecture and ownership boundaries, public interfaces and callers, affected behavior, state/persistence, errors and compatibility, existing tests and test helpers, testing seams and prior art, runtime/tooling constraints, domain vocabulary, and relevant ADRs.
 
-- current architecture and module boundaries;
-- public interfaces and callers;
-- existing tests and verification commands;
-- persistence and state transitions;
-- compatibility constraints already visible in code or documentation;
-- existing domain terminology;
-- prior ADRs or design documentation;
-- package/runtime/tooling constraints.
+Use this distinction rigorously:
 
-Do not ask the user for a fact that can reasonably be obtained from the repository or available tools.
-
-Use this distinction:
-
-- **Fact** → investigate it.
-- **Preference** → ask the user.
-- **Product requirement** → ask the user when unclear.
-- **Design trade-off** → explain options, recommend one, and ask the user to decide.
+- **Repository fact** → investigate it yourself.
 - **Unknown code behavior** → inspect the source.
+- **User preference** → ask the user.
+- **Product requirement** → ask when unclear.
+- **Design trade-off** → explain options, recommend one, and ask the user to decide.
 
-If repository evidence contradicts the user's description, surface the contradiction before planning further.
+Do not ask the user to remember facts that can reasonably be retrieved from GitHub or available tools.
+
+If repository evidence contradicts the user's description, surface the contradiction before continuing.
 
 ---
 
-# Phase 2 — Design grilling
+# Phase 2 — Grill with docs
 
-Treat planning as a design tree.
+Treat the unresolved design as a **design tree**.
 
-Each unsettled decision may unlock more decisions beneath it. Work the tree in rounds. The **frontier** is the set of important questions whose prerequisites are already settled.
+A decision can unlock dependent decisions. The **frontier** is the set of questions whose prerequisites are already settled and which can therefore be answered now without guessing.
 
-For each round:
+Work in rounds. For each round:
 
-1. ask only questions that can be answered without guessing at still-unsettled prerequisites;
-2. prioritize questions that can materially change architecture, scope, interfaces, data, security, compatibility, failure behavior, or verification;
-3. normally ask no more than 3–5 substantive questions in one round, even if a larger frontier exists;
+1. recompute the frontier from the latest answers and repository evidence;
+2. prioritize decisions that materially affect architecture, scope, interfaces, data, security, compatibility, failures, or testing;
+3. normally ask 3–5 substantive questions at a time rather than dumping the entire tree on the user;
 4. number each question;
-5. provide a recommended answer with a short rationale;
-6. wait for the user's decisions before expanding dependent branches.
+5. give a recommended answer and concise rationale;
+6. wait for the user's decisions before asking dependent questions.
 
 A useful priority order is:
 
-1. architecture or ownership boundaries;
-2. public interface and compatibility decisions;
-3. data, persistence, security, and permission decisions;
-4. failure modes and state transitions;
-5. implementation boundaries and operational behavior;
-6. lower-impact implementation details;
-7. naming and cosmetic preferences.
+1. problem and product behavior;
+2. ownership and architecture boundaries;
+3. public interfaces and compatibility;
+4. data, persistence, security, and permissions;
+5. failure behavior and state transitions;
+6. test seams and observability;
+7. lower-level implementation boundaries;
+8. naming and cosmetic choices.
 
-Do not ask low-impact questions while a higher-impact prerequisite is still unresolved.
+The user owns decisions. ChatGPT owns fact finding.
 
-The user owns decisions. The planner owns fact-finding.
+## What must be stress-tested
 
-Planning is not complete merely because the conversation feels long. It is complete when no material decision branch remains silently assumed and the Definition of Ready is satisfied.
+Evaluate these dimensions for relevance; do not mechanically ask all of them for every task:
+
+- exact goal and user-visible outcome;
+- non-goals and scope boundary;
+- actors and user stories;
+- inputs and outputs;
+- ownership/module boundaries;
+- API/event/schema contracts;
+- state transitions and lifecycle;
+- data ownership, persistence, migration, and retention;
+- failures, retries, cancellation, partial success, and edge cases;
+- authorization, trust, and permission boundaries;
+- backward compatibility and rollout constraints;
+- concurrency/idempotency when relevant;
+- operational/platform constraints;
+- observability when relevant;
+- testing strategy and test seams.
+
+Planning is complete only when no material branch is silently assumed.
 
 ---
 
-# Phase 3 — Domain modeling
+# Phase 3 — Domain modeling while grilling
 
-Use domain modeling when the discussion depends on project-specific terminology, ownership boundaries, or concepts whose ambiguity could change implementation.
+Domain modeling runs alongside Phase 2 when terminology or ownership boundaries matter.
 
-## Canonical vocabulary
-
-If the repository already contains `CONTEXT.md`, use its vocabulary and challenge conflicting language immediately.
-
-If a term is vague or overloaded, propose a canonical term and distinguish it from nearby concepts.
-
-Stress-test important terms with concrete scenarios, especially at boundaries between concepts.
-
-Cross-check claimed domain behavior against the actual code. If the glossary, user's statement, and implementation disagree, surface the mismatch.
+If the repository has `CONTEXT.md`, use its language consistently. If the user uses a conflicting term, call it out immediately. When language is vague or overloaded, propose a precise canonical term and distinguish it from nearby concepts. Use concrete scenarios to pressure-test domain relationships, and cross-check claimed behavior against the source.
 
 ## CONTEXT.md
 
-Create or update `CONTEXT.md` only when domain language actually needs to be recorded.
+Create or update domain context only when durable project-specific vocabulary is actually resolved.
 
-`CONTEXT.md` is a glossary, not an implementation spec. It must remain free of implementation details.
+`CONTEXT.md` is a glossary. It must remain free of implementation details. Use `references/CONTEXT_FORMAT.md`.
 
-Use the format in `references/CONTEXT_FORMAT.md`.
-
-During a planning conversation, capture resolved vocabulary logically as it crystallizes, but do not create noisy GitHub commits after every sentence. Publish coherent documentation updates at a sensible planning checkpoint or together with the handoff plan.
+Capture resolved terms during the conversation, but do not create a separate Git commit for every sentence. Publish coherent context updates at a planning checkpoint or together with the final spec.
 
 ## ADRs
 
-Offer an ADR only when all three conditions are true:
+Create an ADR only when all three are true:
 
-1. the decision is meaningfully hard to reverse;
-2. a future reader would find the result surprising without context;
+1. the choice is meaningfully hard to reverse;
+2. a future engineer would find the choice surprising without explanation;
 3. there was a real trade-off between plausible alternatives.
 
-If any condition is missing, do not create an ADR.
+If any condition is missing, keep the decision in the spec rather than creating an ADR. Use `references/ADR_FORMAT.md`.
 
-Use the format in `references/ADR_FORMAT.md`.
-
----
-
-# Phase 4 — Convergence and Definition of Ready
-
-Before publishing an implementation plan as approved work, verify that the relevant dimensions are settled.
-
-Evaluate the dimensions below for relevance. Do not mechanically ask about irrelevant categories.
-
-## Required readiness dimensions
-
-- **Goal**: the desired resulting behavior is concrete.
-- **Non-goals**: nearby work that must remain out of scope is explicit when necessary.
-- **Current behavior**: the relevant existing implementation has been verified from the repository.
-- **Ownership/boundary**: the component or context responsible for the behavior is clear.
-- **Interfaces**: relevant inputs, outputs, public API behavior, events, commands, or file formats are clear.
-- **Failure behavior**: meaningful error and edge cases are defined.
-- **State transitions**: lifecycle or state changes are defined when applicable.
-- **Data/persistence**: data ownership, storage, migration, and lifetime are clear when applicable.
-- **Security/permissions**: trust and permission boundaries are clear when applicable.
-- **Compatibility**: backward-compatibility expectations are clear.
-- **Operational constraints**: performance, platform, deployment, or environmental constraints are known when relevant.
-- **Verification**: there is a concrete way to prove the change is correct.
-- **Open decisions**: no unresolved issue remains that could materially change the implementation direction.
-
-If material design questions remain, the plan must remain `Draft`.
-
-Do not turn a planning document into `Approved` work merely because implementation details can be guessed.
+ADRs are durable architectural memory; the spec is the task-specific implementation contract. Do not duplicate every spec decision into an ADR.
 
 ---
 
-# Phase 5 — Write the implementation plan
+# Phase 4 — Ready-to-spec gate
 
-Use the format in `references/PLAN_FORMAT.md`.
+Before switching from grilling to synthesis, confirm that the feature is ready to specify.
 
-Plans live at:
+Relevant dimensions should be settled:
+
+- the problem is understood from the user's perspective;
+- the proposed solution is explicit;
+- important user stories and edge cases are understood;
+- scope and out-of-scope behavior are explicit;
+- current repository behavior has been verified;
+- implementation boundaries and important contracts are decided;
+- compatibility expectations are decided;
+- meaningful failure behavior is decided;
+- persistence/security/permissions are decided when relevant;
+- testing intent and candidate seams are understood;
+- no unresolved decision remains that could materially change the implementation approach.
+
+If a material design decision remains unresolved, continue grilling. Do not move to spec just because the conversation is lengthy.
+
+Once this gate is satisfied, **stop broad interviewing** and move to synthesis.
+
+---
+
+# Phase 5 — To spec
+
+This phase synthesizes what has already been learned. It is not another general interview.
+
+Before writing the spec:
+
+1. refresh repository facts if the planning conversation was long or the repository may have changed;
+2. use the project's canonical domain vocabulary;
+3. respect relevant ADRs;
+4. identify the testing seams implied by the design and existing code.
+
+## Testing seams
+
+Prefer existing seams over introducing new ones. Use the highest practical seam that verifies external behavior rather than implementation details. Prefer fewer seams; one high-value seam is better than many low-level seams when it covers behavior well. Use similar existing tests as prior art.
+
+The test seam should normally have been discussed during grilling. If synthesis reveals that a material seam was never agreed, do **not** silently invent it. Return only that unresolved decision to the user, settle it, then resume synthesis.
+
+## Spec rules
+
+Use `references/SPEC_FORMAT.md`.
+
+Specs live at:
 
 ```text
-.chatgpt/plans/YYYY-MM-DD-short-description.md
+.chatgpt/specs/YYYY-MM-DD-short-description.md
 ```
 
-Create `.chatgpt/plans/` lazily when the first plan is published.
+Create `.chatgpt/specs/` lazily when the first spec is published.
 
-A plan is an execution contract, not a transcript. Include only context that affects implementation.
+The spec must be understandable by an implementation agent that has the repository but not the earlier conversation.
 
-The plan must record:
+It must describe the problem and solution from the user's perspective, contain an extensive numbered user-story list including meaningful edge cases, record implementation decisions already made, record testing decisions and seams, state out-of-scope work, record repository/branch/base commit, and contain enough detail to prevent the executor from needing to redesign the feature.
 
-- repository;
-- branch;
-- planning base commit;
-- status;
-- background;
-- goal;
-- non-goals;
-- current behavior;
-- agreed design;
-- implementation requirements;
-- likely affected areas;
-- constraints;
-- verification plan;
-- acceptance criteria;
-- open questions;
-- optional execution notes;
-- change log when the shared plan changes materially.
+Do not paste the conversation transcript. Do not include brittle line-by-line implementation instructions. Do not include specific file paths merely to direct edits; stable module/component/interface names are fine when they are part of the design.
 
-Prefer behavior and architectural requirements over brittle line-by-line instructions.
+Avoid code snippets. Exception: a compact prototype-derived shape may be included when it captures a decision more precisely than prose. Include only the decision-rich fragment and note why it is present.
 
-Likely affected files are guidance, not an exclusive allowlist unless the plan explicitly says otherwise.
+## Readiness status
 
-## Plan status
+A published handoff spec should normally be `Ready for implementation` only after the user has explicitly approved the design, unless approval is already unambiguous in the conversation.
 
-Use these statuses:
-
-- `Draft` — material planning is still open or the user has not approved execution.
-- `Approved` — the design is ready for local implementation.
-- `Implemented` — optional status after implementation has been reviewed and the plan is being updated as a historical record.
-- `Superseded` — replaced by another plan; name the replacement.
-
-Do not silently treat `Draft` as `Approved`.
-
-The user's explicit approval is required before changing a plan from `Draft` to `Approved` when approval has not already been clearly given in the conversation.
+If it is still being shared for review, publish it as `Draft` and do not describe it as ready for Codex.
 
 ---
 
-# Phase 6 — Publish the handoff
+# Phase 6 — Publish the GitHub handoff
 
-When the user asks to publish or commit the agreed plan:
+When the user asks to publish the result:
 
-1. determine the target repository and branch;
-2. record the source base commit used for planning;
-3. write the plan under `.chatgpt/plans/`;
-4. include any coherent `CONTEXT.md` or ADR changes that became durable decisions;
-5. avoid unrelated source-code edits unless the user explicitly requests them;
-6. commit the handoff documentation to GitHub.
+1. identify the target repository and branch;
+2. record the source revision used for planning as the **Base commit**;
+3. create/update coherent `CONTEXT.md` or ADR artifacts justified by the discussion;
+4. create the spec under `.chatgpt/specs/`;
+5. commit documentation changes to GitHub;
+6. do not edit production source code as part of this workflow.
 
-Do not put secrets, credentials, access tokens, or private local filesystem paths in the plan.
+The Base commit describes the source revision against which the solution was reasoned. The documentation commit that adds the spec will naturally move repository HEAD beyond that base.
 
-A planning base commit identifies the source revision against which the design was reasoned. It is expected that the plan commit itself will advance repository HEAD beyond that base.
+Do not put secrets, credentials, tokens, or private local filesystem paths in these artifacts.
 
----
+After publication, tell the user the exact spec path that Codex should consume.
 
-# Phase 7 — Local execution preflight
+Typical local handoff:
 
-When using this skill as the local executor, read the exact plan named by the user.
-
-Before editing anything:
-
-1. confirm the plan is `Approved`, unless the user explicitly overrides the status;
-2. inspect the current branch and `HEAD`;
-3. inspect worktree/index status;
-4. inspect the relevant current source;
-5. verify that the plan's base commit is present in the current repository history;
-6. inspect changes between the planning base and current `HEAD` that touch the plan's assumptions or likely affected areas;
-7. determine whether the plan remains compatible with the current source.
-
-Do **not** require `HEAD` to equal the planning base commit. The plan publication commit and later non-conflicting commits legitimately move HEAD forward.
-
-If the planning base is not an ancestor of the execution revision, or intervening changes materially invalidate assumptions, stop and report that the plan needs revalidation.
-
-Never discard, reset, clean, overwrite, or stash pre-existing local changes unless the user explicitly asks. If local changes could interfere with the task, stop and explain the conflict.
+```text
+Pull the latest repository, then use the separately installed implement skill to implement:
+.chatgpt/specs/YYYY-MM-DD-short-description.md
+```
 
 ---
 
-# Phase 8 — Execute the approved plan
+# Phase 7 — Stop
 
-During implementation:
+This skill ends after planning artifacts are published.
 
-- implement only the agreed scope;
-- preserve non-goals and constraints;
-- avoid unrelated refactors;
-- treat the current repository as execution-time truth;
-- do not silently redesign an agreed architecture;
-- if a small unspecified detail can be resolved without changing the agreed design, choose the narrowest reasonable implementation and report the choice afterward;
-- if a material conflict or missing decision appears, stop and request replanning instead of guessing.
+Do not implement the production change under this skill. Do not duplicate the local `implement` workflow here.
 
-Do not modify the plan, commit, push, publish, create a release, or perform other repository-history operations unless the user explicitly asks.
+If implementation later reveals a material missing decision or invalid assumption, return to this planning workflow, inspect the new repository state, revise the spec, and publish a new revision before implementation continues.
 
 ---
 
-# Phase 9 — Verification and execution report
+# Artifact separation
 
-Run the checks required by the plan.
+```text
+CONTEXT.md
+= What does this domain language mean?
 
-If a required check cannot run, state exactly why. Do not claim success for unexecuted verification.
+docs/adr/*.md
+= Why did we make this durable architectural decision?
 
-At completion, report:
+.chatgpt/specs/*.md
+= What exactly should the implementation agent build for this piece of work?
+```
 
-- what changed;
-- files changed;
-- tests/checks run and results;
-- whether all acceptance criteria are satisfied;
-- any deviation from the plan;
-- any remaining risk, limitation, or follow-up.
+The spec may reference relevant domain terms and ADRs, but should not duplicate their full content.
 
-If implementation intentionally deviated from the agreed design, make the deviation conspicuous. Do not bury it in a generic summary.
+# Supporting references
 
----
-
-# Phase 10 — GitHub review
-
-After implementation is committed and pushed, the planner may review the GitHub result against the original plan.
-
-Review should compare:
-
-- implementation versus agreed design;
-- changed files versus intended scope;
-- tests/checks versus verification plan;
-- resulting behavior versus acceptance criteria;
-- any implementation deviation versus the decisions recorded in the plan;
-- whether new long-lived domain or architecture decisions should update `CONTEXT.md` or an ADR.
-
-The implementation is not considered plan-conformant merely because the coding agent says it completed the task. Use repository evidence.
-
----
-
-# General rules
-
-## Keep durable artifacts separated
-
-- `CONTEXT.md` answers: **what do project-specific domain terms mean?**
-- ADRs answer: **why did we make this durable, non-obvious architectural decision?**
-- `.chatgpt/plans/*.md` answers: **what exactly are we implementing in this change?**
-
-Do not collapse all three into the plan.
-
-## Prefer narrow plans
-
-A plan that mixes unrelated changes is harder to reason about, execute, verify, and review. Split unrelated work into separate plans.
-
-## Do not confuse plans with prompts
-
-Plans are version-controlled engineering artifacts. They should make sense to a future human reviewer even if ChatGPT and Codex are replaced by different tools.
-
-## Be agent-agnostic at the protocol boundary
-
-The handoff format is Markdown + Git. Codex is a primary executor, but the plan should not depend on Codex-specific session state or proprietary APIs unless the requested task itself requires that.
+- `references/SPEC_FORMAT.md` — final implementation spec format.
+- `references/CONTEXT_FORMAT.md` — domain glossary format.
+- `references/ADR_FORMAT.md` — ADR format and threshold.

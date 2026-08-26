@@ -1,0 +1,5 @@
+interface:
+  display_name: "AI Development Handoff"
+  short_description: "Grill a design, then publish an implementation spec"
+policy:
+  allow_implicit_invocation: false

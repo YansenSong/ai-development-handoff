@@ -1,44 +1,35 @@
 # AI Development Handoff
 
-A single reusable Skill for turning repository-grounded design discussion into an implementation-ready GitHub handoff, then guiding a local coding agent such as Codex through safe execution and review.
-
-The core workflow is:
+A single planning Skill for turning a repository-grounded ChatGPT conversation into an implementation-ready GitHub spec for a local Codex agent.
 
 ```text
-ChatGPT / Planner
+ChatGPT + GitHub
       ↓
-read GitHub source
+Grill with docs
+      ├── inspect the real codebase
+      ├── question the design tree
+      ├── sharpen boundaries and edge cases
+      ├── update domain context when needed
+      └── record true ADRs when justified
       ↓
-stress-test design and boundaries
+Ready-to-spec gate
       ↓
-record durable domain/architecture decisions when needed
+To spec
+      ├── Problem Statement
+      ├── Solution
+      ├── extensive User Stories
+      ├── Implementation Decisions
+      ├── Testing Decisions / seams
+      └── Out of Scope
       ↓
-Definition of Ready
-      ↓
-Implementation Plan
-      ↓
-GitHub: .chatgpt/plans/*.md
+GitHub: .chatgpt/specs/*.md
       ↓
 local git pull
       ↓
-Codex / Local Coding Agent
-      ↓
-validate plan against real checkout
-      ↓
-implement + verify + report
-      ↓
-push implementation
-      ↓
-ChatGPT / Planner reviews against original plan
+Codex + separately installed implement skill
 ```
 
-## Why one Skill
-
-Earlier versions of this repository separated planning skills from a distributable project template. The workflow is now intentionally unified.
-
-The reusable behavior belongs in one Skill. Target repositories only need to keep the project-specific artifacts they actually produce—primarily `.chatgpt/plans/*.md`, plus optional `CONTEXT.md` and ADRs when the planning process discovers durable domain or architecture knowledge.
-
-There is no requirement to copy a workflow template or a dedicated skill directory into every target project.
+As of v0.3.0, this repository deliberately covers the **planning half only**. The final contract between ChatGPT and Codex is the published spec.
 
 ## Repository layout
 
@@ -51,64 +42,55 @@ ai-development-handoff/
 ├── agents/
 │   └── openai.yaml
 └── references/
-    ├── PLAN_FORMAT.md
+    ├── SPEC_FORMAT.md
     ├── CONTEXT_FORMAT.md
     └── ADR_FORMAT.md
 ```
 
-`SKILL.md` is the single source of truth for the workflow. The files in `references/` are supporting formats used by that Skill, not separate skills.
+`SKILL.md` is the workflow. `references/` contains supporting artifact formats; they are not separate skills.
 
-## How to use it with ChatGPT
+## Target-project artifacts
 
-When using ChatGPT with GitHub access, have ChatGPT read this repository's `SKILL.md`, then ask it to use that workflow while planning a change in another GitHub repository.
-
-The expected result of planning is a version-controlled implementation plan under the target repository's `.chatgpt/plans/` directory.
-
-ChatGPT does not need to directly control the local coding agent for this workflow to work.
-
-## How to use it with Codex
-
-Install or otherwise make this Skill available to Codex, then point Codex at an approved plan in the local project, for example:
+Primary handoff artifact:
 
 ```text
-Execute .chatgpt/plans/2026-08-26-example-change.md using the AI Development Handoff workflow.
+.chatgpt/specs/YYYY-MM-DD-short-description.md
 ```
 
-Codex should validate the plan against the real local checkout before editing, respect existing local changes, implement only the agreed scope, run the specified verification, and report deviations.
-
-## Target project artifacts
-
-A project adopting the workflow may contain only:
-
-```text
-project/
-└── .chatgpt/
-    └── plans/
-        └── YYYY-MM-DD-short-description.md
-```
-
-Additional durable artifacts are created only when useful:
+Durable planning can also produce:
 
 ```text
 CONTEXT.md
-docs/adr/0001-some-decision.md
+docs/adr/0001-short-decision.md
 ```
 
-## Core principles
+For multiple bounded contexts, use `CONTEXT-MAP.md` plus context-specific `CONTEXT.md` files.
 
-1. Find repository facts instead of asking the user to remember them.
-2. Ask the user for decisions, preferences, and unclear requirements.
-3. Stress-test the design before implementation.
-4. Persist decisions, not chat transcripts.
-5. Keep domain glossary, ADRs, and implementation plans separate.
-6. Record the source base commit used during planning.
-7. Do not require execution HEAD to equal the planning base; validate intervening changes instead.
-8. Treat the real local checkout as execution-time truth.
-9. Never silently redesign an approved plan.
-10. Verify with repository evidence rather than trusting an agent's completion claim.
+## ChatGPT usage
+
+Ask ChatGPT to read this repository's `SKILL.md`, then apply it while discussing a change in a target GitHub repository. ChatGPT investigates repository facts, grills the design with you, records durable domain/architecture knowledge when appropriate, then switches to synthesis and publishes the spec.
+
+## Codex handoff
+
+After pulling the target repository locally, point Codex's separately installed implementation skill at the spec:
+
+```text
+Implement .chatgpt/specs/2026-08-26-example-change.md.
+```
+
+Codex should use its own implementation/TDD/review workflow. This repository intentionally does not duplicate that skill.
+
+## Principles
+
+- Facts are ChatGPT's job to retrieve; decisions are the user's job to make.
+- Grill before specifying.
+- Domain context, ADRs, and task specs are different artifacts with different lifetimes.
+- To-spec is synthesis, not a second full interview.
+- Prefer high-level behavioral testing seams and existing seams.
+- Specs capture stable decisions, not chat transcripts or brittle file-by-file instructions.
+- GitHub is the durable handoff medium.
+- Implementation belongs to Codex, not this Skill.
 
 ## Versioning
 
-The current workflow version is stored in `VERSION`.
-
-Until `1.0.0`, the structure and planning protocol may evolve as the workflow is tested on real projects.
+Current version: `0.3.0`.

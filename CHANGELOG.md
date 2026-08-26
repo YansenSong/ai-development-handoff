@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.0 — Planning-only grill → spec workflow
+
+- Reframed the Skill as the ChatGPT planning half of the engineering workflow.
+- Integrated the `grill-with-docs` pattern: repository fact finding, design-tree grilling, domain modeling, and selective ADR creation.
+- Integrated the `to-spec` pattern as a distinct synthesis phase after design convergence.
+- Replaced `.chatgpt/plans/*.md` with `.chatgpt/specs/*.md` as the primary Codex handoff artifact.
+- Added exhaustive user stories and explicit testing-seam decisions to the handoff format.
+- Clarified that to-spec should not reopen broad interviewing; unresolved material decisions return briefly to grilling before synthesis resumes.
+- Removed all local implementation, verification, execution-report, and code-review behavior from the Skill.
+- Removed the imported `implement/` skill because implementation is independently installed in Codex.
+- Removed the imported `to-spec/` directory after absorbing its method into the root Skill.
+- Replaced `PLAN_FORMAT.md` with `SPEC_FORMAT.md`.
+
 ## 0.2.0 — Unified single-skill workflow
 
 - Replaced the separate `skills/` and `template/` architecture with one root `SKILL.md`.
