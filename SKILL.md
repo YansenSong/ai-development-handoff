@@ -94,53 +94,37 @@ If repository evidence contradicts the user's description, surface the contradic
 
 # Phase 2 — Grill with docs
 
-Treat the unresolved design as a **design tree**.
+Interview the user relentlessly until you reach a shared understanding. Map the unresolved design as a **design tree**: every decision branches into the decisions that hang off it.
 
-A decision can unlock dependent decisions. The **frontier** is the set of questions whose prerequisites are already settled and which can therefore be answered now without guessing.
+Work the tree in **rounds**. The **frontier** is every decision whose prerequisites are already settled: the questions you can ask _now_ without guessing at answers you have not heard yet.
 
-Work in rounds. For each round:
+Ask the **whole frontier** in one round. Number each question and give your recommended answer. Then wait for the user's answers before the next round.
 
-1. recompute the frontier from the latest answers and repository evidence;
-2. prioritize decisions that materially affect architecture, scope, interfaces, data, security, compatibility, failures, or testing;
-3. normally ask 3–5 substantive questions at a time rather than dumping the entire tree on the user;
-4. number each question;
-5. give a recommended answer and concise rationale;
-6. wait for the user's decisions before asking dependent questions.
+Format a round like this:
 
-A useful priority order is:
+```text
+❓ Q1 — <question title>: <question body, possibly including choices>
 
-1. problem and product behavior;
-2. ownership and architecture boundaries;
-3. public interfaces and compatibility;
-4. data, persistence, security, and permissions;
-5. failure behavior and state transitions;
-6. test seams and observability;
-7. lower-level implementation boundaries;
-8. naming and cosmetic choices.
+➡️ <your recommended answer>
 
-The user owns decisions. ChatGPT owns fact finding.
+---
 
-## What must be stress-tested
+❓ Q2 — <question title>: <question body, possibly including choices>
 
-Evaluate these dimensions for relevance; do not mechanically ask all of them for every task:
+➡️ <your recommended answer>
+```
 
-- exact goal and user-visible outcome;
-- non-goals and scope boundary;
-- actors and user stories;
-- inputs and outputs;
-- ownership/module boundaries;
-- API/event/schema contracts;
-- state transitions and lifecycle;
-- data ownership, persistence, migration, and retention;
-- failures, retries, cancellation, partial success, and edge cases;
-- authorization, trust, and permission boundaries;
-- backward compatibility and rollout constraints;
-- concurrency/idempotency when relevant;
-- operational/platform constraints;
-- observability when relevant;
-- testing strategy and test seams.
+Each round of user answers reshapes the tree: settled decisions push the frontier outward and unblock questions that depended on them. Recompute the frontier and ask the next round.
 
-Planning is complete only when no material branch is silently assumed.
+A question whose answer depends on another question that is still open in the current round belongs to a **later round**, not the current one.
+
+Finding **facts** is ChatGPT's job, never the user's. When a frontier question depends on a fact from the repository or available environment, use GitHub and available tools to find it rather than asking the user. Treat unresolved fact-finding as an unsettled prerequisite: only questions downstream of that fact must wait; ask the rest of the frontier normally.
+
+The **decisions** are the user's. Put each decision to the user and wait for their answer.
+
+The grilling session is done when the frontier is empty: every branch of the design tree has been visited and nothing remains silently assumed.
+
+Do not move on to synthesis until the user confirms that you have reached a shared understanding.
 
 ---
 
@@ -174,7 +158,7 @@ ADRs are durable architectural memory; the spec is the task-specific implementat
 
 # Phase 4 — Ready-to-spec gate
 
-Before switching from grilling to synthesis, confirm that the feature is ready to specify.
+After the grilling frontier is empty and the user has confirmed shared understanding, perform a separate completeness check before switching to synthesis.
 
 Relevant dimensions should be settled:
 
@@ -190,7 +174,9 @@ Relevant dimensions should be settled:
 - testing intent and candidate seams are understood;
 - no unresolved decision remains that could materially change the implementation approach.
 
-If a material design decision remains unresolved, continue grilling. Do not move to spec just because the conversation is lengthy.
+This gate is **not part of the grilling question-ordering protocol**. Do not use it to impose a fixed priority order or checklist-driven interview on Phase 2.
+
+If this check reveals a material decision that was missed, treat it as a newly discovered branch in the design tree, return to Phase 2, and resume the normal frontier process. After that branch is resolved and the user reconfirms shared understanding, run this gate again.
 
 Once this gate is satisfied, **stop broad interviewing** and move to synthesis.
 
@@ -211,7 +197,7 @@ Before writing the spec:
 
 Prefer existing seams over introducing new ones. Use the highest practical seam that verifies external behavior rather than implementation details. Prefer fewer seams; one high-value seam is better than many low-level seams when it covers behavior well. Use similar existing tests as prior art.
 
-The test seam should normally have been discussed during grilling. If synthesis reveals that a material seam was never agreed, do **not** silently invent it. Return only that unresolved decision to the user, settle it, then resume synthesis.
+The test seam should normally have been discussed during grilling. If synthesis reveals that a material seam was never agreed, do **not** silently invent it. Return only that unresolved decision to the user, settle it through the normal design-tree/frontier process, then resume synthesis.
 
 ## Spec rules
 
