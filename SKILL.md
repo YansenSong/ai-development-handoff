@@ -22,7 +22,7 @@ ChatGPT + GitHub
 repository understanding
       ↓
 grill with docs
-      ├── design tree / frontier questions
+      ├── design tree / one frontier question at a time
       ├── domain vocabulary
       └── ADR candidates
       ↓
@@ -97,31 +97,44 @@ If repository evidence contradicts the user's description, surface the contradic
 
 Interview the user relentlessly until you reach a shared understanding. Map the unresolved design as a **design tree**: every decision branches into the decisions that hang off it.
 
-Work the tree in **rounds**. The **frontier** is every decision whose prerequisites are already settled: the questions you can ask _now_ without guessing at answers you have not heard yet.
+The **frontier** is every decision whose prerequisites are already settled: the questions that could be asked _now_ without guessing at answers that have not been heard yet.
 
-Ask the **whole frontier** in one round. Number each question and give your recommended answer. Then wait for the user's answers before the next round.
+For this ChatGPT workflow, traverse that frontier **one question at a time**.
 
-Format a round like this:
+Before every grilling question:
+
+1. recompute the entire design tree from the latest user answer and repository evidence;
+2. recompute the current frontier;
+3. select one decision from that frontier;
+4. ask **only that one question**;
+5. give a recommended answer with concise reasoning;
+6. wait for the user's response before asking anything else.
+
+Do **not** batch multiple decision questions into one message, even when several decisions are simultaneously on the frontier. A user's answer to the current question may reshape, remove, split, merge, or reprioritize questions that previously appeared independent.
+
+A grilling turn should look like this:
 
 ```text
-❓ Q1 — <question title>: <question body, possibly including choices>
-
-➡️ <your recommended answer>
-
----
-
-❓ Q2 — <question title>: <question body, possibly including choices>
+❓ Q<n> — <question title>: <question body, possibly including choices>
 
 ➡️ <your recommended answer>
 ```
 
-Each round of user answers reshapes the tree: settled decisions push the frontier outward and unblock questions that depended on them. Recompute the frontier and ask the next round.
+You may number questions sequentially for traceability, but each assistant turn contains only one unresolved decision question.
 
-A question whose answer depends on another question that is still open in the current round belongs to a **later round**, not the current one.
+After every user answer:
 
-Finding **facts** is ChatGPT's job, never the user's. When a frontier question depends on a fact from the repository or available environment, use GitHub and available tools to find it rather than asking the user. Treat unresolved fact-finding as an unsettled prerequisite: only questions downstream of that fact must wait; ask the rest of the frontier normally.
+- incorporate the decision into the design tree;
+- update domain-model artifacts immediately when Phase 3 applies;
+- investigate any newly required repository facts yourself;
+- recompute the frontier from scratch;
+- ask the next single frontier question only after that recomputation.
 
-The **decisions** are the user's. Put each decision to the user and wait for their answer.
+A question whose answer depends on another unresolved decision is **not** on the frontier yet and must wait.
+
+Finding **facts** is ChatGPT's job, never the user's. When a possible frontier question depends on a fact from the repository or available environment, use GitHub and available tools to find it rather than asking the user. Treat unresolved fact-finding as an unsettled prerequisite: only decisions downstream of that fact must wait.
+
+The **decisions** are the user's. Put each decision to the user one at a time and wait for their answer.
 
 The grilling session is done when the frontier is empty: every branch of the design tree has been visited and nothing remains silently assumed.
 
@@ -230,7 +243,7 @@ This gate is **not part of the grilling question-ordering protocol**. Do not use
 
 Testing-seam confirmation is intentionally not required by this gate: the original To Spec method performs that narrow confirmation itself in Phase 5.
 
-If this check reveals a material decision that was missed, treat it as a newly discovered branch in the design tree, return to Phase 2, and resume the normal frontier process. After that branch is resolved and the user reconfirms shared understanding, run this gate again.
+If this check reveals a material decision that was missed, treat it as a newly discovered branch in the design tree, return to Phase 2, and resume the normal one-question frontier process. After that branch is resolved and the user reconfirms shared understanding, run this gate again.
 
 Once this gate is satisfied, move to To Spec.
 
