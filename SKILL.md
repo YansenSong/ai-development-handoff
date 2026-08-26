@@ -130,27 +130,91 @@ Do not move on to synthesis until the user confirms that you have reached a shar
 
 # Phase 3 — Domain modeling while grilling
 
-Domain modeling runs alongside Phase 2 when terminology or ownership boundaries matter.
+Actively build and sharpen the project's domain model as you design. This is an **active discipline**: challenge terms, invent edge-case scenarios, and record glossary entries and durable decisions the moment they crystallize.
 
-If the repository has `CONTEXT.md`, use its language consistently. If the user uses a conflicting term, call it out immediately. When language is vague or overloaded, propose a precise canonical term and distinguish it from nearby concepts. Use concrete scenarios to pressure-test domain relationships, and cross-check claimed behavior against the source.
+Merely reading an existing `CONTEXT.md` for vocabulary is not domain modeling. Use this phase when the conversation is changing or sharpening the model itself.
 
-## CONTEXT.md
+## File structure
 
-Create or update domain context only when durable project-specific vocabulary is actually resolved.
+Most repositories have a single context:
 
-`CONTEXT.md` is a glossary. It must remain free of implementation details. Use `references/CONTEXT_FORMAT.md`.
+```text
+/
+├── CONTEXT.md
+├── docs/
+│   └── adr/
+│       ├── 0001-some-decision.md
+│       └── 0002-another-decision.md
+└── src/
+```
 
-Capture resolved terms during the conversation, but do not create a separate Git commit for every sentence. Publish coherent context updates at a planning checkpoint or together with the final spec.
+If a root `CONTEXT-MAP.md` exists, treat the repository as having multiple contexts. The map points to each context and its relationships:
 
-## ADRs
+```text
+/
+├── CONTEXT-MAP.md
+├── docs/
+│   └── adr/                          # system-wide decisions
+└── src/
+    ├── ordering/
+    │   ├── CONTEXT.md
+    │   └── docs/adr/                 # context-specific decisions
+    └── billing/
+        ├── CONTEXT.md
+        └── docs/adr/
+```
 
-Create an ADR only when all three are true:
+Create files lazily. If no `CONTEXT.md` exists, create one when the first domain term is resolved. If no ADR directory exists, create it only when the first ADR is actually justified.
 
-1. the choice is meaningfully hard to reverse;
-2. a future engineer would find the choice surprising without explanation;
-3. there was a real trade-off between plausible alternatives.
+Use `references/CONTEXT_FORMAT.md` and `references/ADR_FORMAT.md` for artifact shape.
 
-If any condition is missing, keep the decision in the spec rather than creating an ADR. Use `references/ADR_FORMAT.md`.
+## During the session
+
+### Challenge against the glossary
+
+When the user uses a term that conflicts with the existing language in `CONTEXT.md`, call it out immediately and ask which meaning is intended.
+
+Example pattern:
+
+```text
+Your glossary defines “cancellation” as X, but you seem to mean Y. Which is it?
+```
+
+### Sharpen fuzzy language
+
+When the user uses vague or overloaded terms, propose a precise canonical term and distinguish it from nearby concepts.
+
+Example pattern:
+
+```text
+You're saying “account”: do you mean the Customer or the User? Those are different concepts.
+```
+
+### Discuss concrete scenarios
+
+When domain relationships are being discussed, stress-test them with specific scenarios. Invent scenarios that probe edge cases and force precision about the boundaries between concepts.
+
+### Cross-reference with code
+
+When the user states how something works, check whether the repository agrees. If the code contradicts the stated domain behavior, surface the contradiction immediately rather than silently choosing one interpretation.
+
+### Update CONTEXT.md inline
+
+When a term is resolved, record it in the current `CONTEXT.md` artifact state **right then**. Do not defer glossary capture until the end of the grilling session or until spec synthesis.
+
+`CONTEXT.md` must be totally devoid of implementation details. Do not treat it as a spec, scratch pad, implementation plan, or repository for technical decisions. It is a glossary and nothing else.
+
+In the ChatGPT → GitHub environment, “update inline” means the resolved glossary content is updated as part of the current working planning artifacts immediately. It does **not** require a separate Git commit for every resolved term; GitHub publication timing is handled in Phase 6.
+
+### Offer ADRs sparingly
+
+Only offer to create an ADR when all three are true:
+
+1. **Hard to reverse** — the cost of changing the decision later is meaningful.
+2. **Surprising without context** — a future reader would reasonably wonder why this approach was chosen.
+3. **The result of a real trade-off** — there were genuine alternatives and one was chosen for specific reasons.
+
+If any of the three is missing, skip the ADR. Keep ordinary task-specific implementation decisions in the spec instead.
 
 ADRs are durable architectural memory; the spec is the task-specific implementation contract. Do not duplicate every spec decision into an ADR.
 
@@ -233,9 +297,9 @@ When the user asks to publish the result:
 
 1. identify the target repository and branch;
 2. record the source revision used for planning as the **Base commit**;
-3. create/update coherent `CONTEXT.md` or ADR artifacts justified by the discussion;
+3. publish the current coherent `CONTEXT.md`, `CONTEXT-MAP.md`, and/or ADR artifact state that was recorded during domain modeling;
 4. create the spec under `.chatgpt/specs/`;
-5. commit documentation changes to GitHub;
+5. commit the documentation changes to GitHub, batching coherent planning artifacts when appropriate rather than creating a commit for every resolved term;
 6. do not edit production source code as part of this workflow.
 
 The Base commit describes the source revision against which the solution was reasoned. The documentation commit that adds the spec will naturally move repository HEAD beyond that base.
