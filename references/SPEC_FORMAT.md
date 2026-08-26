@@ -2,6 +2,8 @@
 
 Use this format for `.chatgpt/specs/YYYY-MM-DD-short-description.md`.
 
+The body preserves the original To Spec structure. The metadata block is a GitHub handoff adaptation for this workflow.
+
 ```md
 # Spec: <Short Title>
 
@@ -16,39 +18,54 @@ Use this format for `.chatgpt/specs/YYYY-MM-DD-short-description.md`.
 
 ## Problem Statement
 
-Describe the problem from the user's perspective. Explain the pain, limitation, or desired capability rather than jumping directly to code changes.
+Describe the problem that the user is facing, from the user's perspective.
 
 ## Solution
 
-Describe the agreed solution from the user's perspective: what will become possible or behave differently after implementation.
+Describe the solution to the problem, from the user's perspective.
 
 ## User Stories
 
-Write an extensive numbered list covering the feature thoroughly, including meaningful edge cases and boundary behavior.
+Write a LONG, numbered list of user stories. The list should be extremely extensive and cover all aspects of the feature, including meaningful boundary and edge cases.
 
-1. As an <actor>, I want <behavior>, so that <benefit>.
+Each user story should use this form:
+
+1. As an <actor>, I want a <feature>, so that <benefit>.
 
 ## Implementation Decisions
 
-Record decisions already made during planning, such as module/component ownership, interfaces/contracts, technical clarifications, architecture choices, schema/data decisions, API/event/command behavior, state transitions, failure behavior, compatibility, permissions/security, and operational constraints.
+Record the implementation decisions that were made. This may include:
 
-Do not write brittle line-by-line instructions. Do not include specific file paths merely to direct edits. Stable module or interface names are fine when they are part of the design.
+- modules that will be built or modified;
+- interfaces of those modules that will be modified;
+- technical clarifications from the developer;
+- architectural decisions;
+- schema changes;
+- API contracts;
+- specific interactions.
 
-Avoid code snippets. Exception: a compact prototype-derived shape may be included when it captures a decision more precisely than prose; include only the decision-rich fragment and note why it is present.
+Do NOT include specific file paths or code snippets. They may become outdated quickly.
+
+Exception: if a prototype produced a snippet that encodes a decision more precisely than prose can—for example a state machine, reducer, schema, or type shape—inline only the decision-rich fragment and note briefly that it came from a prototype. Do not include a working demo.
 
 ## Testing Decisions
 
-Describe what external behavior tests must prove, the chosen testing seam(s), why those seams are appropriate, which stable modules/interfaces are exercised, and similar repository tests/patterns that should be used as prior art when known.
+Record the testing decisions that were made. Include:
 
-Prefer existing seams and the highest practical seam. Prefer fewer seams when they verify the behavior adequately.
+- what makes a good test for this feature: test external behavior, not implementation details;
+- which modules will be tested;
+- the testing seam or seams confirmed with the user;
+- prior art for the tests, such as similar existing tests in the codebase.
+
+Prefer existing seams to new ones. Use the highest seam possible. If new seams are needed, place them at the highest practical point. Fewer seams are better; the ideal number is one when one seam adequately verifies the behavior.
 
 ## Out of Scope
 
-State related work that is explicitly not part of this spec, concretely enough that the implementation agent does not expand the task opportunistically.
+Describe the things that are explicitly outside this spec.
 
 ## Further Notes
 
-Include only additional execution-relevant context that does not fit above, such as rollout notes, compatibility context, references to relevant ADRs/domain context, or intentionally deferred follow-up work.
+Include any further execution-relevant notes about the feature.
 ```
 
 ## Status rules
