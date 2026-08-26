@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.4 — Ask one grilling question at a time
+
+- Changed the ChatGPT grilling interaction to ask exactly one unresolved decision question per assistant turn.
+- Kept the design-tree and frontier model, but recompute the entire tree and frontier after every user answer before choosing the next question.
+- Removed the previous `ask the whole frontier` behavior from this workflow because later questions can be reshaped or invalidated by the answer to the current question.
+- Kept repository fact-finding as ChatGPT's responsibility and user decisions as the user's responsibility.
+- Kept the frontier-empty plus shared-understanding completion rule.
+- Documented this as a deliberate ChatGPT workflow adaptation based on observed Codex `grill-with-docs` interaction behavior, rather than claiming it is identical to the literal `grilling` skill text.
+
 ## 0.3.3 — Restore original to-spec semantics
 
 - Restored Phase 5 to the original `to-spec` sequence: repository understanding, testing-seam proposal/confirmation, then spec synthesis.
