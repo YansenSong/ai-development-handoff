@@ -1,128 +1,114 @@
 # AI Development Handoff
 
-A reusable **ChatGPT → GitHub → local coding agent** handoff workflow.
+A single reusable Skill for turning repository-grounded design discussion into an implementation-ready GitHub handoff, then guiding a local coding agent such as Codex through safe execution and review.
 
-This repository defines a lightweight engineering protocol for separating planning from execution:
+The core workflow is:
 
-1. ChatGPT reads and analyzes a project through its GitHub integration.
-2. The user and ChatGPT discuss the problem, constraints, alternatives, and desired behavior.
-3. Once the direction is agreed, ChatGPT writes a version-controlled implementation plan into the project's `.chatgpt/plans/` directory.
-4. The user pulls the latest repository state locally.
-5. A local coding agent such as Codex reads the plan, verifies it against the real local checkout, implements the agreed scope, and runs the required checks.
-6. The resulting implementation can be pushed back to GitHub for review against the original plan.
+```text
+ChatGPT / Planner
+      ↓
+read GitHub source
+      ↓
+stress-test design and boundaries
+      ↓
+record durable domain/architecture decisions when needed
+      ↓
+Definition of Ready
+      ↓
+Implementation Plan
+      ↓
+GitHub: .chatgpt/plans/*.md
+      ↓
+local git pull
+      ↓
+Codex / Local Coding Agent
+      ↓
+validate plan against real checkout
+      ↓
+implement + verify + report
+      ↓
+push implementation
+      ↓
+ChatGPT / Planner reviews against original plan
+```
 
-GitHub is the durable handoff medium. Markdown is the interface between planning and execution.
+## Why one Skill
 
-## Why this exists
+Earlier versions of this repository separated planning skills from a distributable project template. The workflow is now intentionally unified.
 
-Chat conversations are useful for exploration, but they are a poor long-term execution contract. A local coding agent also should not be expected to reconstruct decisions from an earlier ChatGPT conversation.
+The reusable behavior belongs in one Skill. Target repositories only need to keep the project-specific artifacts they actually produce—primarily `.chatgpt/plans/*.md`, plus optional `CONTEXT.md` and ADRs when the planning process discovers durable domain or architecture knowledge.
 
-This workflow turns the agreed outcome of a conversation into a repository artifact that is:
-
-- version controlled;
-- reviewable by humans;
-- readable by coding agents;
-- tied to a repository branch and base commit;
-- portable across projects and execution agents;
-- auditable after implementation.
+There is no requirement to copy a workflow template or a dedicated skill directory into every target project.
 
 ## Repository layout
 
 ```text
 ai-development-handoff/
+├── SKILL.md
 ├── README.md
 ├── VERSION
 ├── CHANGELOG.md
-└── template/
-    ├── AGENTS.md
-    └── .chatgpt/
-        ├── VERSION
-        ├── WORKFLOW.md
-        ├── PLAN_TEMPLATE.md
-        └── plans/
-            └── README.md
+├── agents/
+│   └── openai.yaml
+└── references/
+    ├── PLAN_FORMAT.md
+    ├── CONTEXT_FORMAT.md
+    └── ADR_FORMAT.md
 ```
 
-The `template/` directory contains the files intended to be placed into a target project.
+`SKILL.md` is the single source of truth for the workflow. The files in `references/` are supporting formats used by that Skill, not separate skills.
 
-## Target project layout
+## How to use it with ChatGPT
 
-After adopting the workflow, a project should contain:
+When using ChatGPT with GitHub access, have ChatGPT read this repository's `SKILL.md`, then ask it to use that workflow while planning a change in another GitHub repository.
+
+The expected result of planning is a version-controlled implementation plan under the target repository's `.chatgpt/plans/` directory.
+
+ChatGPT does not need to directly control the local coding agent for this workflow to work.
+
+## How to use it with Codex
+
+Install or otherwise make this Skill available to Codex, then point Codex at an approved plan in the local project, for example:
+
+```text
+Execute .chatgpt/plans/2026-08-26-example-change.md using the AI Development Handoff workflow.
+```
+
+Codex should validate the plan against the real local checkout before editing, respect existing local changes, implement only the agreed scope, run the specified verification, and report deviations.
+
+## Target project artifacts
+
+A project adopting the workflow may contain only:
 
 ```text
 project/
-├── AGENTS.md
 └── .chatgpt/
-    ├── VERSION
-    ├── WORKFLOW.md
-    ├── PLAN_TEMPLATE.md
     └── plans/
-        ├── README.md
         └── YYYY-MM-DD-short-description.md
 ```
 
-### Upstream-managed files
-
-These files come from this repository and may be updated when the workflow version changes:
-
-- `AGENTS.md`
-- `.chatgpt/VERSION`
-- `.chatgpt/WORKFLOW.md`
-- `.chatgpt/PLAN_TEMPLATE.md`
-- `.chatgpt/plans/README.md` only as initial directory guidance
-
-### Project-owned files
-
-These files belong to the target project and must not be overwritten by workflow updates:
-
-- `.chatgpt/plans/*.md` implementation plans
-
-The plan history is part of the project's own engineering record.
-
-## First adoption
-
-For v0.1.0, adoption is intentionally simple: copy the contents of `template/` into the root of the target repository and commit them as normal files.
-
-Do not use a Git submodule for the first version of this workflow. Keeping the files materialized in each project makes them straightforward for GitHub, ChatGPT, Codex, and other coding agents to read.
-
-An installer/updater CLI may be added later after the workflow has been exercised across multiple real projects.
-
-## Daily workflow
-
-### Planning in ChatGPT
-
-Ask ChatGPT to inspect the relevant GitHub source and discuss the desired change. Before handing the task to a local coding agent, create an implementation plan based on `.chatgpt/PLAN_TEMPLATE.md` and store it under `.chatgpt/plans/`.
-
-A plan should capture the decisions needed for execution, not a transcript of the chat.
-
-### Local execution
-
-Pull the repository locally, then instruct Codex or another coding agent to execute a specific plan, for example:
+Additional durable artifacts are created only when useful:
 
 ```text
-Read AGENTS.md and execute .chatgpt/plans/2026-08-26-example-change.md.
-Verify the plan against the current repository before editing anything.
+CONTEXT.md
+docs/adr/0001-some-decision.md
 ```
-
-The coding agent should treat the plan as the agreed design contract and the current local repository as execution-time truth.
-
-### Review
-
-After implementation is pushed, ChatGPT can inspect the resulting GitHub changes and compare them with the original plan and acceptance criteria.
 
 ## Core principles
 
-1. **Discuss before executing.** Planning and implementation are separate stages.
-2. **Persist decisions, not chat transcripts.** The plan contains execution-relevant consensus.
-3. **Pin planning context.** Plans record repository, branch, and base commit.
-4. **Verify before editing.** Local source is execution-time truth; stale plans must not be followed blindly.
-5. **Keep scope explicit.** Goals, non-goals, constraints, and acceptance criteria are first-class fields.
-6. **Report deviations.** Coding agents must not silently redesign an approved plan.
-7. **Keep the protocol agent-agnostic.** Codex is a primary target, but the handoff format is Markdown + Git rather than a proprietary agent API.
-8. **Keep project plans project-owned.** Workflow upgrades must never erase local decision history.
+1. Find repository facts instead of asking the user to remember them.
+2. Ask the user for decisions, preferences, and unclear requirements.
+3. Stress-test the design before implementation.
+4. Persist decisions, not chat transcripts.
+5. Keep domain glossary, ADRs, and implementation plans separate.
+6. Record the source base commit used during planning.
+7. Do not require execution HEAD to equal the planning base; validate intervening changes instead.
+8. Treat the real local checkout as execution-time truth.
+9. Never silently redesign an approved plan.
+10. Verify with repository evidence rather than trusting an agent's completion claim.
 
 ## Versioning
 
-The current workflow version is stored in `VERSION`. Target projects store the adopted version in `.chatgpt/VERSION`.
+The current workflow version is stored in `VERSION`.
 
-The initial release is `0.1.0`. Until the workflow reaches `1.0.0`, structure and conventions may evolve as they are tested on real projects.
+Until `1.0.0`, the structure and planning protocol may evolve as the workflow is tested on real projects.

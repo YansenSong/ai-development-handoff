@@ -1,18 +1,18 @@
 # Changelog
 
-All notable changes to the AI Development Handoff workflow are recorded here.
+## 0.2.0 — Unified single-skill workflow
 
-## 0.1.0 — 2026-08-26
+- Replaced the separate `skills/` and `template/` architecture with one root `SKILL.md`.
+- Folded design grilling, domain modeling, handoff planning, local execution, and GitHub review into one lifecycle.
+- Moved plan, context, and ADR formats into supporting `references/` files.
+- Removed the requirement to copy workflow/template files into every target project.
+- Defined `.chatgpt/plans/*.md` as the primary project-specific handoff artifact.
+- Added a Definition of Ready gate before approved execution plans.
+- Clarified repository-fact versus user-decision responsibilities.
+- Clarified planning-base versus execution-HEAD compatibility checks.
 
-Initial workflow release.
+## 0.1.0 — Initial workflow
 
-### Added
-
-- Defined the ChatGPT → GitHub → local coding agent handoff model.
-- Added a distributable target-project template under `template/`.
-- Added root `AGENTS.md` instructions for local coding agents.
-- Added `.chatgpt/WORKFLOW.md` as the shared workflow contract.
-- Added `.chatgpt/PLAN_TEMPLATE.md` for durable implementation plans.
-- Added `.chatgpt/VERSION` so target repositories can record the adopted workflow version.
-- Defined `.chatgpt/plans/` as project-owned implementation history that workflow updates must not overwrite.
-- Defined base-revision compatibility checks that account for plan/documentation commits after the source revision used during planning.
+- Introduced the ChatGPT → GitHub → local coding agent handoff model.
+- Added a distributable project template with workflow, plan template, version marker, and agent instructions.
+- Defined implementation plans as version-controlled project artifacts.
