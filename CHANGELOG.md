@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.1 — Restore original grilling semantics
+
+- Restored Phase 2 to the original `grilling` design-tree/frontier protocol.
+- Restored the rule to ask the **whole frontier** in each round rather than limiting rounds to 3–5 questions.
+- Removed the added fixed priority ordering for architecture, interfaces, security, testing, naming, and related categories.
+- Removed the added Phase 2 stress-test checklist from the grilling protocol.
+- Restored the original dependency rule: a question that depends on another still-open question belongs to a later round.
+- Preserved the original responsibility split: ChatGPT finds facts; the user makes decisions.
+- Restored the completion rule: the frontier must be empty and the user must confirm shared understanding before synthesis.
+- Kept the Ready-to-Spec gate as a separate completeness review. If it discovers a missed material decision, that decision becomes a new design-tree branch and returns through the normal grilling frontier process.
+
 ## 0.3.0 — Planning-only grill → spec workflow
 
 - Reframed the Skill as the ChatGPT planning half of the engineering workflow.
